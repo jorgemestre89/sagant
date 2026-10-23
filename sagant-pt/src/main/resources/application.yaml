@@ -2,6 +2,20 @@ spring:
   application:
     name: sagant-pt
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sagant
+    username: sagant
+    password: sagant_dev
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
 server:
   port: 8080
 

@@ -1,0 +1,37 @@
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: sagant-postgres
+    environment:
+      POSTGRES_DB: sagant
+      POSTGRES_USER: sagant
+      POSTGRES_PASSWORD: sagant_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck: #para comprobar cuándo PostgreSQL está listo para aceptar conexiones
+      test: ["CMD-SHELL", "pg_isready -U sagant -d sagant"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: sagant-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@sagant.com
+      PGADMIN_DEFAULT_PASSWORD: admin_dev
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+volumes:
+  postgres_data:
+  pgadmin_data:
