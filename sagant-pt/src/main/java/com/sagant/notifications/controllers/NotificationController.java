@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.net.URI;
 import java.util.Objects;
@@ -25,11 +26,12 @@ public class NotificationController {
     }
 
     @PostMapping
-    public ResponseEntity<NotificationResponseDTO> createNotification(
+    public ResponseEntity<NotificationResponseDTO> createNotification(@RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody NotificationRequestDTO request) {
 
         //mandamos a crear la notificación a partir de los datos recibidos del request
         Notification notification = notificationService.createNotification(
+                idempotencyKey,
                 request.getRecipient(),
                 request.getChannel(),
                 request.getSubject(),

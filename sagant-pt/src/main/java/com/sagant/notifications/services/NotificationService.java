@@ -1,28 +1,87 @@
 package com.sagant.notifications.services;
 
+import com.sagant.notifications.domain.IdempotencyRecord;
 import com.sagant.notifications.domain.Notification;
 import com.sagant.notifications.domain.enums.NotificationChannel;
 import com.sagant.notifications.domain.enums.NotificationPriority;
+import com.sagant.notifications.exceptions.IdempotencyConflictException;
+import com.sagant.notifications.exceptions.MissingIdempotencyKeyException;
+import com.sagant.notifications.repositories.IdempotencyRecordRepository;
 import com.sagant.notifications.repositories.NotificationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;
+    private final IdempotencyRecordRepository idempotencyRecordRepository;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository,
+                               IdempotencyRecordRepository idempotencyRecordRepository) {
         this.notificationRepository = notificationRepository;
+        this.idempotencyRecordRepository = idempotencyRecordRepository;
     }
 
     @Transactional
-    public Notification createNotification(String recipient, NotificationChannel channel, String subject,  String body,
-                                           NotificationPriority priority, Map<String, String> metadata) {
+    public Notification createNotification(String idempotencyKey, String recipient, NotificationChannel channel,
+                                           String subject, String body, NotificationPriority priority,
+                                           Map<String, String> metadata) {
+
+        if (Objects.isNull(idempotencyKey) || idempotencyKey.isBlank()) {
+            throw new MissingIdempotencyKeyException("No se puede crear la notificación. "+
+                    "La clave de idempotencia es obligatoria."
+            );
+        }
+
+        int reserved = idempotencyRecordRepository.reserveKey(idempotencyKey);
+
+        if (reserved == 0) {
+            IdempotencyRecord existing = idempotencyRecordRepository.findById(idempotencyKey)
+                    .orElseThrow(() -> new IllegalStateException("No se puede crear la notificación. "+
+                            "No se encontró el registro de idempotencia"));
+
+            Notification original = existing.getNotification();
+
+            if (!sameRequest(original, recipient, channel, subject, body, priority, metadata)) {
+                throw new IdempotencyConflictException("No se puede crear la notificación. "+
+                        "La clave de idempotencia ya fue utilizada con una solicitud diferente."
+                );
+            }
+
+            return original;
+        }
+
+        IdempotencyRecord record = idempotencyRecordRepository.findById(idempotencyKey)
+                .orElseThrow(() -> new IllegalStateException("No se puede crear la notificación. "+
+                        "No se encontró el registro de idempotencia reservado"));
+
+        Notification notification = saveNotification(recipient, channel, subject, body, priority, metadata);
+
+        record.associateNotification(notification);
+
+        return notification;
+    }
+
+    private Notification saveNotification(String recipient, NotificationChannel channel, String subject, String body,
+                                          NotificationPriority priority, Map<String, String> metadata) {
 
         Notification notification = new Notification(recipient, channel, subject, body, priority, metadata);
 
         return notificationRepository.save(notification);
     }
+
+    private boolean sameRequest(Notification original, String recipient, NotificationChannel channel, String subject,
+                                String body, NotificationPriority priority, Map<String, String> metadata) {
+
+        return Objects.equals(original.getRecipient(), recipient)
+                && original.getChannel() == channel
+                && Objects.equals(original.getSubject(), subject)
+                && Objects.equals(original.getBody(), body)
+                && original.getPriority() == priority
+                && Objects.equals(original.getMetadata(), metadata);
+    }
+
 }
