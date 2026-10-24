@@ -1,5 +1,7 @@
 package com.sagant.notifications.domain;
 
+import com.sagant.notifications.domain.enums.NotificationChannel;
+import com.sagant.notifications.domain.enums.NotificationPriority;
 import com.sagant.notifications.domain.enums.NotificationStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,8 +15,11 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.Map;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -26,23 +31,43 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idNotification;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 255)
     private String recipient;
 
-    @Column(nullable = false, length = 1000)
-    private String message;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private NotificationChannel channel;
+
+    @Column(length = 255)
+    private String subject;
+
+    @Column(nullable = false, length = 5000)
+    private String body;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private NotificationPriority priority;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotificationStatus status;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, String> metadata;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    public Notification(String recipient, String message) {
+    public Notification(String recipient, NotificationChannel channel, String subject, String body,
+                        NotificationPriority priority, Map<String, String> metadata) {
         this.recipient = recipient;
-        this.message = message;
+        this.channel = channel;
+        this.subject = subject;
+        this.body = body;
+        this.priority = priority;
         this.status = NotificationStatus.PENDING;
+        this.metadata = metadata;
         this.createdAt = Instant.now();
     }
 

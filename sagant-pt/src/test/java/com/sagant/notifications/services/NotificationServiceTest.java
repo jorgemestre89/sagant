@@ -1,6 +1,8 @@
 package com.sagant.notifications.services;
 
 import com.sagant.notifications.domain.Notification;
+import com.sagant.notifications.domain.enums.NotificationChannel;
+import com.sagant.notifications.domain.enums.NotificationPriority;
 import com.sagant.notifications.domain.enums.NotificationStatus;
 import com.sagant.notifications.repositories.NotificationRepository;
 import org.junit.jupiter.api.Test;
@@ -8,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,9 +28,19 @@ public class NotificationServiceTest {
     @Test
     void shouldCreateAndSaveNotification() {
 
+        Map<String, String> metadata = Map.of(
+                "template", "payment-confirmation",
+                "language", "es"
+        );
+
+
         Notification notificationToReturn = new Notification(
                 "destinatario@test.com",
-                "Notificación de prueba"
+                NotificationChannel.EMAIL,
+                "Confirmación de pago",
+                "Tu pago fue procesado correctamente",
+                NotificationPriority.HIGH,
+                metadata
         );
 
         org.mockito.Mockito.doReturn(notificationToReturn)
@@ -40,15 +54,26 @@ public class NotificationServiceTest {
         //creo la notificación
         Notification result = notificationService.createNotification(
                 "destinatario@test.com",
-                "Notificación de prueba"
+                NotificationChannel.EMAIL,
+                "Confirmación de pago",
+                "Tu pago fue procesado correctamente",
+                NotificationPriority.HIGH,
+                metadata
         );
 
         // Assert
-        assertThat(result).isNotNull();
         assertThat(result.getRecipient())
-                .isEqualTo(notificationToReturn.getRecipient());
-        assertThat(result.getMessage())
-                .isEqualTo(notificationToReturn.getMessage());
+                .isEqualTo("destinatario@test.com");
+        assertThat(result.getChannel())
+                .isEqualTo(NotificationChannel.EMAIL);
+        assertThat(result.getSubject())
+                .isEqualTo("Confirmación de pago");
+        assertThat(result.getBody())
+                .isEqualTo("Tu pago fue procesado correctamente");
+        assertThat(result.getPriority())
+                .isEqualTo(NotificationPriority.HIGH);
+        assertThat(result.getMetadata())
+                .isEqualTo(metadata);
         assertThat(result.getStatus())
                 .isEqualTo(NotificationStatus.PENDING);
         assertThat(result.getCreatedAt()).isNotNull();
