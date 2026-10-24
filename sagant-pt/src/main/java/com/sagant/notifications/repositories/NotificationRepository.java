@@ -1,6 +1,6 @@
-package com.sagant.notificaciones.domain.repositories;
+package com.sagant.notifications.repositories;
 
-import com.sagant.notificaciones.domain.Notification;
+import com.sagant.notifications.domain.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {

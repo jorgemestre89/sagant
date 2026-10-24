@@ -1,4 +1,4 @@
-package com.sagant.notificaciones;
+package com.sagant.notifications;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

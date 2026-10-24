@@ -1,6 +1,6 @@
-package com.sagant.notificaciones.domain;
+package com.sagant.notifications.domain;
 
-import com.sagant.notificaciones.domain.enums.NotificationStatus;
+import com.sagant.notifications.domain.enums.NotificationStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,11 +12,13 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.Instant;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
 @Entity
 @Table(name = "notifications")
 public class Notification {

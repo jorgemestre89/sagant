@@ -1,4 +1,4 @@
-package com.sagant.notificaciones.domain.enums;
+package com.sagant.notifications.domain.enums;
 
 public enum NotificationStatus {
     PENDING,

@@ -1,7 +1,7 @@
-package com.sagant.notificaciones.domain.repositories;
+package com.sagant.notifications.repositories;
 
-import com.sagant.notificaciones.domain.Notification;
-import com.sagant.notificaciones.domain.enums.NotificationStatus;
+import com.sagant.notifications.domain.Notification;
+import com.sagant.notifications.domain.enums.NotificationStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -21,12 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureTestDatabase(
         replace = AutoConfigureTestDatabase.Replace.NONE
 )
-public class NotificacionRepositoryTest {
+public class NotificationRepositoryTest {
 
     private final NotificationRepository notificationRepository;
 
     @Autowired
-    public NotificacionRepositoryTest(NotificationRepository notificationRepository){
+    public NotificationRepositoryTest(NotificationRepository notificationRepository){
         this.notificationRepository = notificationRepository;
     }
 
