@@ -59,6 +59,16 @@ public class Notification {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    //para attr para reintentos
+    @Column(nullable = false)
+    private int attemptCount;
+
+    @Column
+    private Instant nextAttemptAt;
+
+    @Column(columnDefinition = "TEXT")
+    private String lastError;
+
     public Notification(String recipient, NotificationChannel channel, String subject, String body,
                         NotificationPriority priority, Map<String, String> metadata) {
         this.recipient = recipient;
