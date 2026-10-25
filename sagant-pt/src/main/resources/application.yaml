@@ -1,6 +1,9 @@
 spring:
   application:
     name: sagant-pt
+  task:
+    scheduling:
+      enabled: true  #deshabilitar la planificación en el perfil de pruebas y mantenerla habilitada en la aplicación normal
 
   datasource:
     url: jdbc:postgresql://localhost:5432/sagant
@@ -37,3 +40,6 @@ notifications:
     timeout: PT5M   #declarar en formato Duration el timeout utilizado para recuperar las notificaciones antiguas en PROCESSING
     max-attempts: 3 #máximo de tres intentos de envío en total
     retry-delay: PT10S #espera inicial de 10 segundos antes de reintentar
+    interval: PT2S #tiempo en que se intenta reservar y procesar las notificaciones
+    recovery-interval: PT1M #tiempo en que va buscar notificaciones que quedaron en PROCESSING  y ponerlas en PENDING nuevamente
+    scheduler-enabled: false
