@@ -29,3 +29,7 @@ info:
   app:
     name: Sagant Notification Service
     version: 0.0.1
+
+notifications:
+  dispatch:
+    service-url: ${NOTIFICATIONS_SERVICE_URL:http://localhost:8090/notifications}
