@@ -86,11 +86,21 @@ public class Notification {
     }
 
     //tranciciones del estado de una notificación
+    /**
+     * Marca la notificación como en proceso e incrementa el contador
+     * de intentos de envío.
+     */
     public void markAsProcessing() {
         this.status = NotificationStatus.PROCESSING;
         this.processingStartedAt = Instant.now();
+        this.attemptCount++;
     }
 
+    /**
+     * Marca la notificación como enviada y borra las fechas de
+     * inicio de procesamiento, el proximo intento y el mensaje
+     * de último error.
+     */
     public void markAsSent() {
         this.status = NotificationStatus.SENT;
         this.processingStartedAt = null;
@@ -98,6 +108,10 @@ public class Notification {
         this.lastError = null;
     }
 
+    /**
+     * Marca la notificación como fallida y borra la fecha de
+     * inicio de procesamiento y guarda el mensaje de error
+     */
     public void markAsFailed(String error) {
         this.status = NotificationStatus.FAILED;
         this.processingStartedAt = null;
@@ -111,6 +125,11 @@ public class Notification {
         this.lastError = error;
     }
 
+    /**
+     * Marca la notificación como pendiente para que
+     * pueda ser procesada y borrra la fecha de
+     * inicio de procesamiento.
+     */
     public void recoverFromProcessing() {
         this.status = NotificationStatus.PENDING;
         this.processingStartedAt = null;

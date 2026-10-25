@@ -2,12 +2,15 @@ package com.sagant.notifications.services;
 
 import com.sagant.notifications.domain.Notification;
 import com.sagant.notifications.repositories.NotificationRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,8 +36,18 @@ class NotificationProcessingServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
-    @InjectMocks
     private NotificationProcessingService notificationProcessingService;
+
+    @BeforeEach
+    void setUp() {
+        notificationProcessingService = new NotificationProcessingService(
+                notificationQueueService,
+                notificationDispatchService,
+                notificationRepository,
+                3,
+                Duration.ofSeconds(10)
+        );
+    }
 
     /*
      * Verifica que no se intente despachar ni persistir ninguna notificación
@@ -76,18 +89,18 @@ class NotificationProcessingServiceTest {
         verify(notification, never()).markAsFailed(anyString());
     }
 
-    /*
-     * Verifica que, si el dispatcher lanza una excepción durante el envío,
-     * la notificación se marque como fallida y se persista el mensaje
-     * del error, sin marcarla como enviada.
+    /**
+     * Verifica que un error de envío programe un reintento
+     * cuando todavía quedan intentos disponibles.
      */
     @Test
-    void shouldMarkNotificationAsFailedWhenDispatchThrowsException() {
+    void shouldScheduleRetryWhenDispatchThrowsException() {
         // Arrange
         Notification notification = mock(Notification.class);
 
         when(notificationQueueService.claimPendingNotifications(10))
                 .thenReturn(List.of(notification));
+        when(notification.getAttemptCount()).thenReturn(1);
 
         doThrow(new RuntimeException("Error de envío"))
                 .when(notificationDispatchService)
@@ -98,16 +111,19 @@ class NotificationProcessingServiceTest {
 
         // Assert
         verify(notificationDispatchService).dispatch(notification);
-        verify(notification).markAsFailed("Error de envío");
+        verify(notification).scheduleRetry(
+                any(Instant.class),
+                eq("Error de envío")
+        );
         verify(notificationRepository).save(notification);
+        verify(notification, never()).markAsFailed(anyString());
         verify(notification, never()).markAsSent();
     }
 
-    /*
+
+    /**
      * Verifica que un error al despachar una notificación no interrumpa
      * el procesamiento de las siguientes notificaciones del mismo lote.
-     * Comprueba que cada notificación reciba el estado correspondiente
-     * y que ambas se persistan.
      */
     @Test
     void shouldContinueProcessingWhenOneNotificationFails() {
@@ -120,6 +136,7 @@ class NotificationProcessingServiceTest {
                         failedNotification,
                         successfulNotification
                 ));
+        when(failedNotification.getAttemptCount()).thenReturn(1);
 
         doThrow(new RuntimeException("Error de envío"))
                 .when(notificationDispatchService)
@@ -132,7 +149,11 @@ class NotificationProcessingServiceTest {
         verify(notificationDispatchService).dispatch(failedNotification);
         verify(notificationDispatchService).dispatch(successfulNotification);
 
-        verify(failedNotification).markAsFailed("Error de envío");
+        verify(failedNotification).scheduleRetry(
+                any(Instant.class),
+                eq("Error de envío")
+        );
+        verify(failedNotification, never()).markAsFailed(anyString());
         verify(failedNotification, never()).markAsSent();
 
         verify(successfulNotification).markAsSent();
@@ -141,6 +162,7 @@ class NotificationProcessingServiceTest {
         verify(notificationRepository).save(failedNotification);
         verify(notificationRepository).save(successfulNotification);
     }
+
 
     /*
      * Verifica que un tamaño de lote igual a cero provoque
@@ -160,4 +182,37 @@ class NotificationProcessingServiceTest {
                 notificationRepository
         );
     }
+
+
+    /**
+     * Verifica que la notificación quede definitivamente fallida
+     * cuando se agota el máximo de intentos de envío.
+     */
+    @Test
+    void shouldMarkNotificationAsFailedWhenMaxAttemptsReached() {
+        // Arrange
+        Notification notification = mock(Notification.class);
+
+        when(notificationQueueService.claimPendingNotifications(10))
+                .thenReturn(List.of(notification));
+        when(notification.getAttemptCount()).thenReturn(3);
+
+        doThrow(new RuntimeException("Error de envío"))
+                .when(notificationDispatchService)
+                .dispatch(notification);
+
+        // Act
+        notificationProcessingService.processPendingNotifications(10);
+
+        // Assert
+        verify(notificationDispatchService).dispatch(notification);
+        verify(notification).markAsFailed("Error de envío");
+        verify(notification, never()).scheduleRetry(
+                any(Instant.class),
+                anyString()
+        );
+        verify(notification, never()).markAsSent();
+        verify(notificationRepository).save(notification);
+    }
+
 }

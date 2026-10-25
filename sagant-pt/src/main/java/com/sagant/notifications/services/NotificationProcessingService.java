@@ -2,33 +2,41 @@ package com.sagant.notifications.services;
 
 import com.sagant.notifications.domain.Notification;
 import com.sagant.notifications.repositories.NotificationRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import java.time.Duration;
+import java.time.Instant;
 
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Coordina el procesamiento de las notificaciones pendientes,
- * desde su reserva hasta la actualización de su estado final.
- * <p>
- * Delega la obtención y reserva de notificaciones a
- * {@link NotificationQueueService} y el envío al
- * {@link NotificationDispatchService}.
- * </p>
- */
+ *  Coordina el procesamiento de las notificaciones pendientes,
+ *  desde su reserva hasta la actualización de su estado.
+ *  Delega la obtención y reserva de notificaciones a
+ *  {@link NotificationQueueService} y el envío a
+ *  {@link NotificationDispatchService}. Si un envío falla,
+ *  gestiona los reintentos y persiste el resultado de cada intento.
+ *  */
 @Service
 public class NotificationProcessingService {
     private final NotificationQueueService notificationQueueService;
     private final NotificationDispatchService notificationDispatchService;
     private final NotificationRepository notificationRepository;
+    private final int maxAttempts;
+    private final Duration retryDelay;
 
     public NotificationProcessingService(NotificationQueueService notificationQueueService,
                                          NotificationDispatchService notificationDispatchService,
-                                         NotificationRepository notificationRepository) {
+                                         NotificationRepository notificationRepository,
+                                         @Value("${notifications.processing.max-attempts:3}") int maxAttempts,
+                                         @Value("${notifications.processing.retry-delay:PT10S}") Duration retryDelay) {
 
         this.notificationQueueService = notificationQueueService;
         this.notificationDispatchService = notificationDispatchService;
         this.notificationRepository = notificationRepository;
+        this.maxAttempts = maxAttempts;
+        this.retryDelay = retryDelay;
     }
 
     /**
@@ -60,19 +68,28 @@ public class NotificationProcessingService {
     }
 
     /**
-     * Envía una notificación y persiste el resultado del procesamiento.
-     * <p>
-     * Si el envío finaliza correctamente, la notificación se marca como
-     * {@code SENT}. Si el dispatcher lanza una {@link RuntimeException},
-     * se marca como {@code FAILED} y se registra el mensaje del error.
-     * </p>
+     *  Envía una notificación y persiste el resultado del procesamiento.
+     *  <p>
+     *  Si el envío finaliza correctamente, la notificación se marca como
+     *  {@code SENT}. Si el envío falla, se registra el error y se programa
+     *  un reintento mientras no se haya alcanzado el máximo de intentos
+     *  configurado.
+     *  El tiempo de espera entre reintentos aumenta
+     *  exponencialmente a partir del retraso base configurado.
+     *  Cuando se alcanza el máximo de intentos, la notificación se marca
+     *  como {@code FAILED}.
+     *  En todos los casos, se persiste el estado  actualizado de la notificación.
+     *  </p>
      *
-     * @param notification notificación previamente reservada para su procesamiento
+     *  @param notification notificación previamente reservada para su procesamiento
      */
     private void processNotification(Notification notification) {
-
         try {
             notificationDispatchService.dispatch(notification);
+
+            notification.markAsSent();
+            notificationRepository.save(notification);
+
         } catch (RuntimeException exception) {
             String error = exception.getMessage();
 
@@ -80,12 +97,18 @@ public class NotificationProcessingService {
                 error = exception.getClass().getSimpleName();
             }
 
-            notification.markAsFailed(error);
-            notificationRepository.save(notification);
-            return;
-        }
+            if (notification.getAttemptCount() < maxAttempts) {
+                long delaySeconds = retryDelay.toSeconds()
+                        * (1L << (notification.getAttemptCount() - 1));
 
-        notification.markAsSent();
-        notificationRepository.save(notification);
+                Instant retryAt = Instant.now().plusSeconds(delaySeconds);
+
+                notification.scheduleRetry(retryAt, error);
+            } else {
+                notification.markAsFailed(error);
+            }
+
+            notificationRepository.save(notification);
+        }
     }
 }
