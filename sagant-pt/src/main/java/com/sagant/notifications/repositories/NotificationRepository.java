@@ -4,6 +4,7 @@ import com.sagant.notifications.domain.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.time.Instant;
 
 import java.util.List;
 
@@ -27,4 +28,18 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         FOR UPDATE SKIP LOCKED
         """, nativeQuery = true)
     List<Notification> lockPendingNotifications(@Param("batchSize") int batchSize);
+
+    /*
+    * Esta consulta selecciona únicamente las notificaciones cuyo procesamiento comenzó antes del límite temporal.
+    * SKIP LOCKED permite que otros workers omitan las filas que ya están bloqueadas por otra transacción.
+    * */
+    @Query(value = """
+        SELECT * FROM notifications
+        WHERE status = 'PROCESSING'
+          AND processing_started_at <= :cutoff
+        ORDER BY processing_started_at ASC
+        LIMIT :batchSize
+        FOR UPDATE SKIP LOCKED
+        """, nativeQuery = true)
+    List<Notification> lockAbandonedProcessing(@Param("cutoff") Instant cutoff, @Param("batchSize") int batchSize);
 }

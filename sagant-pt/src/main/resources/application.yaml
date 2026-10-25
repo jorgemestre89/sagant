@@ -32,4 +32,6 @@ info:
 
 notifications:
   dispatch:
-    service-url: ${NOTIFICATIONS_SERVICE_URL:http://localhost:8090/notifications}
+    service-url: ${NOTIFICATIONS_SERVICE_URL:http://localhost:8090/notifications} #URL de la API que proc la notificacion enviada
+  processing:
+    timeout: PT5M   #declarar en formato Duration el timeout utilizado para recuperar las notificaciones antiguas en PROCESSING

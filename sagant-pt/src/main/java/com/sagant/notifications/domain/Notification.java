@@ -111,4 +111,9 @@ public class Notification {
         this.lastError = error;
     }
 
+    public void recoverFromProcessing() {
+        this.status = NotificationStatus.PENDING;
+        this.processingStartedAt = null;
+    }
+
 }
