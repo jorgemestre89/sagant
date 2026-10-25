@@ -59,7 +59,7 @@ public class Notification {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    //para attr para reintentos
+    //attr para reintentos
     @Column(nullable = false)
     private int attemptCount;
 
@@ -68,6 +68,10 @@ public class Notification {
 
     @Column(columnDefinition = "TEXT")
     private String lastError;
+
+    //permite saber cuándo una notificación pasó a PROCESSING y detectar reservas abandonadas si la aplicación se cae
+    @Column
+    private Instant processingStartedAt;
 
     public Notification(String recipient, NotificationChannel channel, String subject, String body,
                         NotificationPriority priority, Map<String, String> metadata) {
@@ -79,6 +83,32 @@ public class Notification {
         this.status = NotificationStatus.PENDING;
         this.metadata = metadata;
         this.createdAt = Instant.now();
+    }
+
+    //tranciciones del estado de una notificación
+    public void markAsProcessing() {
+        this.status = NotificationStatus.PROCESSING;
+        this.processingStartedAt = Instant.now();
+    }
+
+    public void markAsSent() {
+        this.status = NotificationStatus.SENT;
+        this.processingStartedAt = null;
+        this.nextAttemptAt = null;
+        this.lastError = null;
+    }
+
+    public void markAsFailed(String error) {
+        this.status = NotificationStatus.FAILED;
+        this.processingStartedAt = null;
+        this.lastError = error;
+    }
+
+    public void scheduleRetry(Instant retryAt, String error) {
+        this.status = NotificationStatus.PENDING;
+        this.processingStartedAt = null;
+        this.nextAttemptAt = retryAt;
+        this.lastError = error;
     }
 
 }
