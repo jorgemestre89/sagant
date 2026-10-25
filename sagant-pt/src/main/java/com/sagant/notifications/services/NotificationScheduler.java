@@ -17,7 +17,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 )
 public class NotificationScheduler {
 
-    private static final int BATCH_SIZE = 50;
+    /*definimos el tamaño del BATCH_SIZE = 4 para que coincida con
+    * los 4 workers que configuramos en el ThreadPoolTaskExecutor
+    * por lo cual va a procesar 4 notificaciones en paralelo por
+    * cada lote de notificaiones que levante el scheduler*/
+    private static final int BATCH_SIZE = 4;
 
     private final NotificationProcessingService notificationProcessingService;
     private final NotificationRecoveryService notificationRecoveryService;

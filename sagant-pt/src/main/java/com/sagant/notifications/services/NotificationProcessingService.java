@@ -2,10 +2,15 @@ package com.sagant.notifications.services;
 
 import com.sagant.notifications.domain.Notification;
 import com.sagant.notifications.repositories.NotificationRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.ArrayList;
+import java.util.concurrent.RejectedExecutionException;
 
 import java.util.List;
 import java.util.Objects;
@@ -25,18 +30,21 @@ public class NotificationProcessingService {
     private final NotificationRepository notificationRepository;
     private final int maxAttempts;
     private final Duration retryDelay;
+    private final Executor notificationExecutor;
 
     public NotificationProcessingService(NotificationQueueService notificationQueueService,
                                          NotificationDispatchService notificationDispatchService,
                                          NotificationRepository notificationRepository,
                                          @Value("${notifications.processing.max-attempts:3}") int maxAttempts,
-                                         @Value("${notifications.processing.retry-delay:PT10S}") Duration retryDelay) {
+                                         @Value("${notifications.processing.retry-delay:PT10S}") Duration retryDelay,
+                                         @Qualifier("notificationExecutor") Executor notificationExecutor) {
 
         this.notificationQueueService = notificationQueueService;
         this.notificationDispatchService = notificationDispatchService;
         this.notificationRepository = notificationRepository;
         this.maxAttempts = maxAttempts;
         this.retryDelay = retryDelay;
+        this.notificationExecutor = notificationExecutor;
     }
 
     /**
@@ -53,7 +61,6 @@ public class NotificationProcessingService {
      * @throws IllegalArgumentException si {@code batchSize} es menor o igual a cero
      */
     public void processPendingNotifications(int batchSize) {
-
         if (batchSize <= 0) {
             throw new IllegalArgumentException(
                     "El tamaño del lote debe ser mayor que cero."
@@ -62,9 +69,25 @@ public class NotificationProcessingService {
 
         List<Notification> notifications = notificationQueueService.claimPendingNotifications(batchSize);
 
+        List<CompletableFuture<Void>> tasks = new ArrayList<>();
+
         for (Notification notification : notifications) {
-            processNotification(notification);
+            try {
+                CompletableFuture<Void> task = CompletableFuture.runAsync(
+                        () -> processNotification(notification),
+                        notificationExecutor
+                );
+
+                tasks.add(task);
+            } catch (RejectedExecutionException exception) {
+                // El executor no aceptó la tarea: liberar la reserva.
+                notification.recoverFromProcessing();
+                notificationRepository.save(notification);
+            }
         }
+
+        //esperamos a que terminen las tareas aceptadas antes de retornar
+        CompletableFuture.allOf(tasks.toArray(new CompletableFuture<?>[0])).join();
     }
 
     /**
