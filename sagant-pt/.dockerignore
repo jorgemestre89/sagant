@@ -1,0 +1,10 @@
+#evitar enviar al contexto de construcción los artefactos compilados, la configuración del IDE y archivos locales
+
+.git
+.gradle
+**/build
+.idea
+.vscode
+.continue
+.env
+*.iml

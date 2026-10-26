@@ -11,7 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck: #para comprobar cuándo PostgreSQL está listo para aceptar conexiones
+    healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sagant -d sagant"]
       interval: 5s
       timeout: 3s
@@ -31,6 +31,58 @@ services:
       postgres:
         condition: service_healthy
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: sagant-api
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sagant
+      SPRING_DATASOURCE_USERNAME: sagant
+      SPRING_DATASOURCE_PASSWORD: sagant_dev
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: sagant-worker
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sagant
+      SPRING_DATASOURCE_USERNAME: sagant
+      SPRING_DATASOURCE_PASSWORD: sagant_dev
+      SERVER_PORT: 8081
+      NOTIFICATIONS_SERVICE_URL: ${NOTIFICATIONS_SERVICE_URL:-http://service-mock:8090/notifications}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      service-mock:
+        condition: service_started
+
+  service-mock:
+    image: python:3.12-slim
+    container_name: sagant-service-mock
+    working_dir: /app
+    volumes:
+      - ./service-mock:/app:ro
+    command: [ "python", "-u", "server.py" ]
+    ports:
+      - "8090:8090"
 
 volumes:
   postgres_data:

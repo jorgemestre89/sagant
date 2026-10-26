@@ -1,1 +1,5 @@
 rootProject.name = 'sagant-pt'
+
+include 'shared'
+include 'api'
+include 'worker'
