@@ -41,6 +41,8 @@ services:
       SPRING_DATASOURCE_USERNAME: sagant
       SPRING_DATASOURCE_PASSWORD: sagant_dev
       SERVER_PORT: 8080
+      SAGANT_SECURITY_ISSUER_URI: http://localhost:8180/realms/Sagant
+      SAGANT_SECURITY_JWK_SET_URI: http://keycloak:8080/realms/Sagant/protocol/openid-connect/certs
     ports:
       - "8080:8080"
     depends_on:
@@ -84,6 +86,46 @@ services:
     ports:
       - "8090:8090"
 
+
+  keycloak-db:
+    image: postgres:17
+    container_name: sagant-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Defini KEYCLOAK_DB_PASSWORD en .env}
+    ports:
+      - "5433:5432"
+    volumes:
+      - keycloak_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    container_name: sagant-keycloak
+    command: ["start-dev", "--http-port=8080"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?Defini KEYCLOAK_ADMIN_USERNAME en .env}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Defini KEYCLOAK_ADMIN_PASSWORD en .env}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Defini KEYCLOAK_DB_PASSWORD en .env}
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8180:8080"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+
+
 volumes:
   postgres_data:
   pgadmin_data:
+  keycloak_data:

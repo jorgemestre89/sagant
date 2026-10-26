@@ -37,3 +37,8 @@ info:
   app:
     name: Sagant Notification API
     version: 0.0.1
+
+sagant:
+  security:
+    issuer-uri: ${SAGANT_SECURITY_ISSUER_URI:http://localhost:8180/realms/sagant}
+    jwk-set-uri: ${SAGANT_SECURITY_JWK_SET_URI:http://localhost:8180/realms/sagant/protocol/openid-connect/certs}

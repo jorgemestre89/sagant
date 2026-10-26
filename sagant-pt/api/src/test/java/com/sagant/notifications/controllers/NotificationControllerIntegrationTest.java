@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -74,6 +75,7 @@ public class NotificationControllerIntegrationTest {
                 """;
 
         mockMvc.perform(post("/api/notifications")
+                        .with(jwt())
                         .header("Idempotency-Key", idempotencyKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -126,6 +128,7 @@ public class NotificationControllerIntegrationTest {
 
         // Primera petición: crear la notificación.
         String firstResponse = mockMvc.perform(post("/api/notifications")
+                        .with(jwt())
                         .header("Idempotency-Key", idempotencyKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -141,6 +144,7 @@ public class NotificationControllerIntegrationTest {
 
         // Segundo intento: repetir exactamente la misma petición.
         mockMvc.perform(post("/api/notifications")
+                        .with(jwt())
                         .header("Idempotency-Key", idempotencyKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -197,6 +201,7 @@ public class NotificationControllerIntegrationTest {
 
         // Primera petición: registrar la clave con la solicitud original.
         mockMvc.perform(post("/api/notifications")
+                        .with(jwt())
                         .header("Idempotency-Key", idempotencyKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(originalRequest))
@@ -204,6 +209,7 @@ public class NotificationControllerIntegrationTest {
 
         // Segundo intento: misma clave, pero con un destinatario diferente.
         mockMvc.perform(post("/api/notifications")
+                        .with(jwt())
                         .header("Idempotency-Key", idempotencyKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(differentRequest))
@@ -213,5 +219,23 @@ public class NotificationControllerIntegrationTest {
         assertThat(notificationRepository.count()).isEqualTo(1);
         assertThat(idempotencyRecordRepository.count()).isEqualTo(1);
     }
+
+
+    /*
+    * Verificamos que un request sin credenciales reciba un 401 y
+    * que la solicitud rechazada no crea notificaciones ni registro
+    * de idempotencia
+    * */
+    @Test
+    void shouldReturnUnauthorizedWhenRequestHasNoCredentials() throws Exception {
+        mockMvc.perform(post("/api/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(notificationRepository.count()).isZero();
+        assertThat(idempotencyRecordRepository.count()).isZero();
+    }
+
 
 }
