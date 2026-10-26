@@ -9,10 +9,13 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class NotificationDispatchService {
 
+    private static final Logger log = LoggerFactory.getLogger(NotificationDispatchService.class);
     private final Map<NotificationChannel, NotificationDispatcher> dispatchers;
 
     public NotificationDispatchService(List<NotificationDispatcher> dispatcherList) {
@@ -43,11 +46,25 @@ public class NotificationDispatchService {
      * al canal que tenga definido
      * */
     public void dispatch(Notification notification) {
+        Long notificationId = notification.getIdNotification();
         NotificationChannel channel = notification.getChannel();
+
+        log.info(
+                "Inicio del despacho de notificación notificationId={} canal={}",
+                notificationId,
+                channel
+        );
 
         NotificationDispatcher dispatcher = dispatchers.get(channel);
 
         if (Objects.isNull(dispatcher)) {
+
+            log.error(
+                    "No existe un dispatcher configurado para la notificación notificationId={} canal={}",
+                    notificationId,
+                    channel
+            );
+
             throw new IllegalArgumentException(
                     "No existe un dispatcher configurado para el canal "
                             + channel
@@ -55,5 +72,12 @@ public class NotificationDispatchService {
         }
 
         dispatcher.dispatch(notification);
+
+        log.info(
+                "Despacho de notificación finalizado correctamente notificationId={} canal={}",
+                notificationId,
+                channel
+        );
+
     }
 }

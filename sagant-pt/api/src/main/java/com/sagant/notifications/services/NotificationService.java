@@ -10,12 +10,16 @@ import com.sagant.notifications.repositories.IdempotencyRecordRepository;
 import com.sagant.notifications.repositories.NotificationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
 
 @Service
 public class NotificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
     private final NotificationRepository notificationRepository;
     private final IdempotencyRecordRepository idempotencyRecordRepository;
 
@@ -46,10 +50,22 @@ public class NotificationService {
             Notification original = existing.getNotification();
 
             if (!sameRequest(original, recipient, channel, subject, body, priority, metadata)) {
+
+                log.warn(
+                        "Conflicto de idempotencia: la clave ya fue utilizada con otra solicitud notificationId={}",
+                        original.getIdNotification()
+                );
+
                 throw new IdempotencyConflictException("No se puede crear la notificación. "+
                         "La clave de idempotencia ya fue utilizada con una solicitud diferente."
                 );
             }
+
+            log.info(
+                    "Solicitud idempotente repetida: se devuelve la notificación original notificationId={} estado={}",
+                    original.getIdNotification(),
+                    original.getStatus()
+            );
 
             return original;
         }
@@ -61,6 +77,14 @@ public class NotificationService {
         Notification notification = saveNotification(recipient, channel, subject, body, priority, metadata);
 
         record.associateNotification(notification);
+
+        log.info(
+                "Notificación creada y asociada al registro de idempotencia notificationId={} canal={} prioridad={} estado={}",
+                notification.getIdNotification(),
+                notification.getChannel(),
+                notification.getPriority(),
+                notification.getStatus()
+        );
 
         return notification;
     }

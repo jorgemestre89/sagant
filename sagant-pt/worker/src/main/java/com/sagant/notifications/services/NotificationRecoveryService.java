@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Servicio responsable de recuperar las notificaciones que permanecen en
@@ -30,6 +32,8 @@ import java.util.List;
  */
 @Service
 public class NotificationRecoveryService {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationRecoveryService.class);
     private final NotificationRepository notificationRepository;
     private final Duration processingTimeout;
 
@@ -56,22 +60,41 @@ public class NotificationRecoveryService {
      */
     @Transactional
     public int recoverAbandonedNotifications(int batchSize) {
+
         if (batchSize <= 0) {
+
+            log.warn(
+                    "Solicitud de recuperación rechazada: el tamaño del lote debe ser mayor que cero batchSize={}",
+                    batchSize
+            );
+
             throw new IllegalArgumentException(
                     "batchSize must be greater than zero");
         }
 
         Instant cutoff = Instant.now().minus(processingTimeout);
 
+        log.debug(
+                "Inicio de recuperación de notificaciones abandonadas batchSize={} limiteProcesamiento={}",
+                batchSize,
+                processingTimeout
+        );
+
         List<Notification> abandoned = notificationRepository.lockAbandonedProcessing(cutoff, batchSize);
 
         if (abandoned.isEmpty()) {
+            log.debug("No se encontraron notificaciones abandonadas para recuperar");
             return 0;
         }
 
         abandoned.forEach(Notification::recoverFromProcessing);
-
         notificationRepository.saveAll(abandoned);
+
+        log.warn(
+                "Se recuperaron notificaciones con procesamiento abandonado cantidadRecuperada={} batchSize={}",
+                abandoned.size(),
+                batchSize
+        );
 
         return abandoned.size();
     }

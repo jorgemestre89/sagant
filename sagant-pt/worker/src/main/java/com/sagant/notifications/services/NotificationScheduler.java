@@ -3,6 +3,8 @@ package com.sagant.notifications.services;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Ejecuta periódicamente el procesamiento y la recuperación
@@ -16,6 +18,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
         matchIfMissing = true
 )
 public class NotificationScheduler {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationScheduler.class);
 
     /*definimos el tamaño del BATCH_SIZE = 4 para que coincida con
     * los 4 workers que configuramos en el ThreadPoolTaskExecutor
@@ -37,6 +41,7 @@ public class NotificationScheduler {
      */
     @Scheduled(fixedDelayString = "${notifications.processing.interval:PT2S}")
     public void processPendingNotifications() {
+        log.debug("Ejecución programada de procesamiento de notificaciones");
         notificationProcessingService.processPendingNotifications(BATCH_SIZE);
     }
 
@@ -46,6 +51,15 @@ public class NotificationScheduler {
      */
     @Scheduled(fixedDelayString = "${notifications.processing.recovery-interval:PT1M}")
     public void recoverAbandonedNotifications() {
-        notificationRecoveryService.recoverAbandonedNotifications(BATCH_SIZE);
+        log.debug("Ejecución programada de recuperación de notificaciones abandonadas");
+
+        int recovered = notificationRecoveryService.recoverAbandonedNotifications(BATCH_SIZE);
+
+        if (recovered > 0) {
+            log.warn(
+                    "La tarea programada recupero notificaciones abandonadas cantidadRecuperada={}",
+                    recovered
+            );
+        }
     }
 }

@@ -4,11 +4,13 @@ import com.sagant.notifications.domain.Notification;
 import com.sagant.notifications.repositories.NotificationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 
 @Service
 public class NotificationQueueService {
+    private static final Logger log = LoggerFactory.getLogger(NotificationQueueService.class);
     private final NotificationRepository notificationRepository;
 
     public NotificationQueueService(NotificationRepository notificationRepository) {
@@ -37,13 +39,33 @@ public class NotificationQueueService {
     public List<Notification> claimPendingNotifications(int batchSize) {
 
         if (batchSize <= 0) {
+
+            log.warn(
+                    "Solicitud de reserva rechazada: el tamaño del lote debe ser mayor que cero batchSize={}",
+                    batchSize
+            );
+
             throw new IllegalArgumentException("El tamaño del lote debe ser mayor que cero.");
         }
+
+        log.debug(
+                "Inicio de reserva de notificaciones pendientes batchSize={}",
+                batchSize
+        );
 
         List<Notification> notifications = notificationRepository.lockPendingNotifications(batchSize);
 
         notifications.forEach(Notification::markAsProcessing);
 
-        return notificationRepository.saveAll(notifications);
+        List<Notification> claimedNotifications = notificationRepository.saveAll(notifications);
+
+        log.info(
+                "Reserva de notificaciones finalizada cantidadReservada={} batchSize={}",
+                claimedNotifications.size(),
+                batchSize
+        );
+
+        return claimedNotifications;
+
     }
 }

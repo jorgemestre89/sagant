@@ -11,6 +11,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.ArrayList;
 import java.util.concurrent.RejectedExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
@@ -25,6 +27,8 @@ import java.util.Objects;
  *  */
 @Service
 public class NotificationProcessingService {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationProcessingService.class);
     private final NotificationQueueService notificationQueueService;
     private final NotificationDispatchService notificationDispatchService;
     private final NotificationRepository notificationRepository;
@@ -67,7 +71,11 @@ public class NotificationProcessingService {
             );
         }
 
+        log.info("Inicio del procesamiento de lote batchSize={}", batchSize);
+
         List<Notification> notifications = notificationQueueService.claimPendingNotifications(batchSize);
+
+        log.info("Notificaciones reservadas para procesamiento cantidad={}", notifications.size());
 
         List<CompletableFuture<Void>> tasks = new ArrayList<>();
 
@@ -81,8 +89,20 @@ public class NotificationProcessingService {
                 tasks.add(task);
             } catch (RejectedExecutionException exception) {
                 // El executor no aceptó la tarea: liberar la reserva.
+                log.warn(
+                        "Tarea de notificación rechazada por el executor notificationId={} intento={}",
+                        notification.getIdNotification(),
+                        notification.getAttemptCount()
+                );
+
                 notification.recoverFromProcessing();
                 notificationRepository.save(notification);
+
+                log.info(
+                        "Reserva de notificación liberada notificationId={} estado={}",
+                        notification.getIdNotification(),
+                        notification.getStatus()
+                );
             }
         }
 
@@ -107,11 +127,29 @@ public class NotificationProcessingService {
      *  @param notification notificación previamente reservada para su procesamiento
      */
     private void processNotification(Notification notification) {
+
+        long notificationId = notification.getIdNotification();
+        int intento = notification.getAttemptCount();
+
+        log.info(
+                "Inicio del procesamiento de notificación notificationId={} intento={} canal={}",
+                notificationId,
+                intento,
+                notification.getChannel()
+        );
+
         try {
             notificationDispatchService.dispatch(notification);
 
             notification.markAsSent();
             notificationRepository.save(notification);
+
+            log.info(
+                    "Notificación procesada correctamente notificationId={} intento={} estado={}",
+                    notificationId,
+                    intento,
+                    notification.getStatus()
+            );
 
         } catch (RuntimeException exception) {
             String error = exception.getMessage();
@@ -127,11 +165,33 @@ public class NotificationProcessingService {
                 Instant retryAt = Instant.now().plusSeconds(delaySeconds);
 
                 notification.scheduleRetry(retryAt, error);
+
+                log.warn(
+                        "Fallo el envio de la notificación; se programó un reintento notificationId={} " +
+                                "intento={} maxIntentos={} proximoIntento={} tipoError={}",
+                        notificationId,
+                        intento,
+                        maxAttempts,
+                        retryAt,
+                        exception.getClass().getSimpleName()
+                );
+
             } else {
                 notification.markAsFailed(error);
+
+                log.error(
+                        "Falló definitivamente el envio de la notificación notificationId={} intento={} " +
+                                "estado={} tipoError={}",
+                        notificationId,
+                        intento,
+                        notification.getStatus(),
+                        exception.getClass().getSimpleName()
+                );
             }
 
             notificationRepository.save(notification);
         }
     }
+
+
 }
