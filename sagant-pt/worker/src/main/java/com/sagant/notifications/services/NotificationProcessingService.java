@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.concurrent.RejectedExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.util.List;
 import java.util.Objects;
@@ -35,13 +36,15 @@ public class NotificationProcessingService {
     private final int maxAttempts;
     private final Duration retryDelay;
     private final Executor notificationExecutor;
+    private final MeterRegistry meterRegistry;
 
     public NotificationProcessingService(NotificationQueueService notificationQueueService,
                                          NotificationDispatchService notificationDispatchService,
                                          NotificationRepository notificationRepository,
                                          @Value("${notifications.processing.max-attempts:3}") int maxAttempts,
                                          @Value("${notifications.processing.retry-delay:PT10S}") Duration retryDelay,
-                                         @Qualifier("notificationExecutor") Executor notificationExecutor) {
+                                         @Qualifier("notificationExecutor") Executor notificationExecutor,
+                                         MeterRegistry meterRegistry) {
 
         this.notificationQueueService = notificationQueueService;
         this.notificationDispatchService = notificationDispatchService;
@@ -49,6 +52,7 @@ public class NotificationProcessingService {
         this.maxAttempts = maxAttempts;
         this.retryDelay = retryDelay;
         this.notificationExecutor = notificationExecutor;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -97,6 +101,7 @@ public class NotificationProcessingService {
 
                 notification.recoverFromProcessing();
                 notificationRepository.save(notification);
+                meterRegistry.counter("sagant.notifications.rejected").increment();
 
                 log.info(
                         "Reserva de notificación liberada notificationId={} estado={}",
@@ -144,6 +149,8 @@ public class NotificationProcessingService {
             notification.markAsSent();
             notificationRepository.save(notification);
 
+            meterRegistry.counter("sagant.notifications.processed").increment();
+
             log.info(
                     "Notificación procesada correctamente notificationId={} intento={} estado={}",
                     notificationId,
@@ -176,6 +183,8 @@ public class NotificationProcessingService {
                         exception.getClass().getSimpleName()
                 );
 
+                meterRegistry.counter("sagant.notifications.retry.scheduled").increment();
+
             } else {
                 notification.markAsFailed(error);
 
@@ -187,6 +196,9 @@ public class NotificationProcessingService {
                         notification.getStatus(),
                         exception.getClass().getSimpleName()
                 );
+
+                meterRegistry.counter("sagant.notifications.failed").increment();
+
             }
 
             notificationRepository.save(notification);

@@ -12,6 +12,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.*;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,7 +49,8 @@ class NotificationProcessingServiceTest {
                 notificationRepository,
                 3,
                 Duration.ofSeconds(10),
-                Runnable::run
+                Runnable::run,
+                new SimpleMeterRegistry()
         );
     }
 
@@ -268,7 +271,8 @@ class NotificationProcessingServiceTest {
                         notificationRepository,
                         3,
                         Duration.ofSeconds(10),
-                        workers
+                        workers,
+                        new SimpleMeterRegistry()
                 );
 
         try {
@@ -328,7 +332,8 @@ class NotificationProcessingServiceTest {
                 notificationRepository,
                 3,
                 Duration.ofSeconds(10),
-                rejectingExecutor
+                rejectingExecutor,
+                new SimpleMeterRegistry()
         );
 
         // Act

@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * Servicio responsable de recuperar las notificaciones que permanecen en
@@ -36,11 +37,13 @@ public class NotificationRecoveryService {
     private static final Logger log = LoggerFactory.getLogger(NotificationRecoveryService.class);
     private final NotificationRepository notificationRepository;
     private final Duration processingTimeout;
+    private final MeterRegistry meterRegistry;
 
     public NotificationRecoveryService(NotificationRepository notificationRepository,
-                                       @Value("${notifications.processing.timeout:PT5M}") Duration processingTimeout) {
+                                       @Value("${notifications.processing.timeout:PT5M}") Duration processingTimeout, MeterRegistry meterRegistry) {
         this.notificationRepository = notificationRepository;
         this.processingTimeout = processingTimeout;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -89,6 +92,7 @@ public class NotificationRecoveryService {
 
         abandoned.forEach(Notification::recoverFromProcessing);
         notificationRepository.saveAll(abandoned);
+        meterRegistry.counter("sagant.notifications.recovered").increment(abandoned.size());
 
         log.warn(
                 "Se recuperaron notificaciones con procesamiento abandonado cantidadRecuperada={} batchSize={}",

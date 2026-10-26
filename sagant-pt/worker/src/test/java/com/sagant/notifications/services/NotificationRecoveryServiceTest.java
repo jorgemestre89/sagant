@@ -16,6 +16,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 
 /**
@@ -38,7 +39,10 @@ public class NotificationRecoveryServiceTest {
 
     @BeforeEach
     void setUp() {
-        notificationRecoveryService = new NotificationRecoveryService(notificationRepository, Duration.ofMinutes(5));
+        notificationRecoveryService = new NotificationRecoveryService(notificationRepository,
+                Duration.ofMinutes(5),
+                new SimpleMeterRegistry()
+        );
     }
 
     /*

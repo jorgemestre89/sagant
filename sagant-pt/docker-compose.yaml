@@ -67,7 +67,7 @@ services:
       SERVER_PORT: 8081
       NOTIFICATIONS_SERVICE_URL: ${NOTIFICATIONS_SERVICE_URL:-http://service-mock:8090/notifications}
     ports:
-      - "8081:8081"
+      -  "127.0.0.1:8081:8081"
     depends_on:
       postgres:
         condition: service_healthy
