@@ -10,19 +10,21 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.Objects;
+
 @Component
 public class ServiceNotificationDispatcher implements NotificationDispatcher {
 
     private final RestClient restClient;
-    private final String serviceUrl;
+    //private final String serviceUrl;
     private final ObjectMapper objectMapper;
 
-    public ServiceNotificationDispatcher(RestClient.Builder restClientBuilder,
-                                         @Value("${notifications.dispatch.service-url}") String serviceUrl,
+    public ServiceNotificationDispatcher(RestClient.Builder restClientBuilder,/*
+                                         @Value("${notifications.dispatch.service-url}") String serviceUrl,*/
                                          ObjectMapper objectMapper) {
 
         this.restClient = restClientBuilder.build();
-        this.serviceUrl = serviceUrl;
+        //this.serviceUrl = serviceUrl;
         this.objectMapper = objectMapper;
     }
 
@@ -39,8 +41,15 @@ public class ServiceNotificationDispatcher implements NotificationDispatcher {
                         notification.getSubject(),
                         notification.getBody()
         );
-        System.out.println("SERVICE URL: " + serviceUrl);
-        System.out.println("SERVICE DTO: " + request);
+
+        //leemos a url a enviar la notificación
+        String serviceUrlByNotification = notification.getServiceUrl();
+
+        if (Objects.isNull(serviceUrlByNotification) || serviceUrlByNotification.isBlank()) {
+            throw new IllegalStateException(
+                    "La notificación SERVICE no tiene una URL de destino"
+            );
+        }
 
         /*
         * enviamos el dto con los datos de la notificación
@@ -50,7 +59,7 @@ public class ServiceNotificationDispatcher implements NotificationDispatcher {
             byte[] requestBody = objectMapper.writeValueAsBytes(request);
 
             restClient.post()
-                    .uri(serviceUrl)
+                    .uri(serviceUrlByNotification)
                     .contentType(MediaType.APPLICATION_JSON)
                     .contentLength(requestBody.length)
                     .body(requestBody)

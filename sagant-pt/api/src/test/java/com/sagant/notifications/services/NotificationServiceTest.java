@@ -51,7 +51,8 @@ public class NotificationServiceTest {
                 "Confirmación de pago",
                 "Tu pago fue procesado correctamente",
                 NotificationPriority.HIGH,
-                metadata
+                metadata,
+                null
         );
 
         IdempotencyRecord idempotencyRecord = new IdempotencyRecord("abc-123");
@@ -77,7 +78,8 @@ public class NotificationServiceTest {
                 "Confirmación de pago",
                 "Tu pago fue procesado correctamente",
                 NotificationPriority.HIGH,
-                metadata
+                metadata,
+                null
         );
 
         // Verificamos los datos de la notificación.
@@ -129,7 +131,8 @@ public class NotificationServiceTest {
                 "Confirmación de pago",
                 "Tu pago fue procesado correctamente",
                 NotificationPriority.HIGH,
-                metadata
+                metadata,
+                null
         );
 
         IdempotencyRecord record = new IdempotencyRecord(key);
@@ -149,7 +152,8 @@ public class NotificationServiceTest {
                 "Confirmación de pago",
                 "Tu pago fue procesado correctamente",
                 NotificationPriority.HIGH,
-                metadata
+                metadata,
+                null
         );
 
         org.assertj.core.api.Assertions.assertThat(result).isSameAs(original);
@@ -175,7 +179,8 @@ public class NotificationServiceTest {
                 "Confirmación de pago",
                 "Tu pago fue procesado correctamente",
                 NotificationPriority.HIGH,
-                Map.of("language", "es")
+                Map.of("language", "es"),
+                null
         );
 
         IdempotencyRecord record = new IdempotencyRecord(key);
@@ -195,7 +200,8 @@ public class NotificationServiceTest {
                         "Confirmación de pago",
                         "Tu pago fue procesado correctamente",
                         NotificationPriority.HIGH,
-                        Map.of("language", "es")
+                        Map.of("language", "es"),
+                        null
                 )
         ).isInstanceOf(IdempotencyConflictException.class);
 
@@ -220,7 +226,8 @@ public class NotificationServiceTest {
                                 "Confirmación de pago",
                                 "Tu pago fue procesado correctamente",
                                 NotificationPriority.HIGH,
-                                Map.of("language", "es")
+                                Map.of("language", "es"),
+                                null
                         )
                 ).isInstanceOf(MissingIdempotencyKeyException.class)
                 .hasMessageContaining("La clave de idempotencia es obligatoria");

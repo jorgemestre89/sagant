@@ -112,7 +112,6 @@ public class ServiceNotificationDispatcherTest {
         // Crea el dispatcher con RestClient y la URL del servidor simulado.
         dispatcher = new ServiceNotificationDispatcher(
                 RestClient.builder(),
-                serviceUrl,
                 objectMapper
         );
     }
@@ -234,13 +233,19 @@ public class ServiceNotificationDispatcherTest {
      * @return una notificación destinada al canal SERVICE.
      */
     private Notification createNotification() {
+
+        String serviceUrl = "http://localhost:"
+                + server.getAddress().getPort()
+                + "/notifications";
+
         return new Notification(
                 "destinatario@test.com",
                 NotificationChannel.SERVICE,
                 "Asunto de prueba",
                 "Contenido de prueba",
                 NotificationPriority.HIGH,
-                Map.of()
+                Map.of(),
+                serviceUrl
         );
     }
 

@@ -46,7 +46,8 @@ public class NotificationRepositoryTest {
                 "Confirmación de pago",
                 "Tu pago fue procesado correctamente",
                 NotificationPriority.HIGH,
-                metadata
+                metadata,
+                null
         );
 
         // Act: persistir en PostgreSQL

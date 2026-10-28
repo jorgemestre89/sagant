@@ -48,4 +48,10 @@ public class NotificationResponseDTO {
     @Schema(description = "Fecha de creación en formato ISO-8601",
             example = "2026-10-27T15:30:00Z")
     private Instant createdAt;
+
+    @Schema(
+            description = "URL HTTP de destino, obligatoria para el canal SERVICE",
+            example = "http://localhost:8090/notifications"
+    )
+    private String serviceUrl;
 }

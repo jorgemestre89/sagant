@@ -84,7 +84,8 @@ public class NotificationController {
                 request.getSubject(),
                 request.getBody(),
                 request.getPriority(),
-                Objects.isNull(request.getMetadata()) ? java.util.Map.of() : request.getMetadata()
+                Objects.isNull(request.getMetadata()) ? java.util.Map.of() : request.getMetadata(),
+                request.getServiceUrl()
         );
 
         //mapeamos de Notificaction a NotificationResponseRecord

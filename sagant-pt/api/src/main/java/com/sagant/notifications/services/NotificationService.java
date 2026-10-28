@@ -32,7 +32,7 @@ public class NotificationService {
     @Transactional
     public Notification createNotification(String idempotencyKey, String recipient, NotificationChannel channel,
                                            String subject, String body, NotificationPriority priority,
-                                           Map<String, String> metadata) {
+                                           Map<String, String> metadata, String serviceUrl) {
 
         if (Objects.isNull(idempotencyKey) || idempotencyKey.isBlank()) {
             throw new MissingIdempotencyKeyException("No se puede crear la notificación. "+
@@ -49,7 +49,7 @@ public class NotificationService {
 
             Notification original = existing.getNotification();
 
-            if (!sameRequest(original, recipient, channel, subject, body, priority, metadata)) {
+            if (!sameRequest(original, recipient, channel, subject, body, priority, metadata, serviceUrl)) {
 
                 log.warn(
                         "Conflicto de idempotencia: la clave ya fue utilizada con otra solicitud notificationId={}",
@@ -74,7 +74,7 @@ public class NotificationService {
                 .orElseThrow(() -> new IllegalStateException("No se puede crear la notificación. "+
                         "No se encontró el registro de idempotencia reservado"));
 
-        Notification notification = saveNotification(recipient, channel, subject, body, priority, metadata);
+        Notification notification = saveNotification(recipient, channel, subject, body, priority, metadata, serviceUrl);
 
         record.associateNotification(notification);
 
@@ -90,22 +90,23 @@ public class NotificationService {
     }
 
     private Notification saveNotification(String recipient, NotificationChannel channel, String subject, String body,
-                                          NotificationPriority priority, Map<String, String> metadata) {
+                                          NotificationPriority priority, Map<String, String> metadata, String serviceUrl) {
 
-        Notification notification = new Notification(recipient, channel, subject, body, priority, metadata);
+        Notification notification = new Notification(recipient, channel, subject, body, priority, metadata, serviceUrl);
 
         return notificationRepository.save(notification);
     }
 
     private boolean sameRequest(Notification original, String recipient, NotificationChannel channel, String subject,
-                                String body, NotificationPriority priority, Map<String, String> metadata) {
+                                String body, NotificationPriority priority, Map<String, String> metadata, String serviceUrl) {
 
         return Objects.equals(original.getRecipient(), recipient)
                 && original.getChannel() == channel
                 && Objects.equals(original.getSubject(), subject)
                 && Objects.equals(original.getBody(), body)
                 && original.getPriority() == priority
-                && Objects.equals(original.getMetadata(), metadata);
+                && Objects.equals(original.getMetadata(), metadata)
+                && Objects.equals(original.getServiceUrl(), serviceUrl);
     }
 
 }

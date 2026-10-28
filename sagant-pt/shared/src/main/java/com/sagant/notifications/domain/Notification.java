@@ -73,8 +73,11 @@ public class Notification {
     @Column
     private Instant processingStartedAt;
 
+    @Column(name = "service_url", length = 2048)
+    private String serviceUrl;
+
     public Notification(String recipient, NotificationChannel channel, String subject, String body,
-                        NotificationPriority priority, Map<String, String> metadata) {
+                        NotificationPriority priority, Map<String, String> metadata, String serviceUrl) {
         this.recipient = recipient;
         this.channel = channel;
         this.subject = subject;
@@ -83,6 +86,7 @@ public class Notification {
         this.status = NotificationStatus.PENDING;
         this.metadata = metadata;
         this.createdAt = Instant.now();
+        this.serviceUrl = serviceUrl;
     }
 
     //tranciciones del estado de una notificación

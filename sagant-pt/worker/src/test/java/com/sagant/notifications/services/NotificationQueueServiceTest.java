@@ -86,7 +86,8 @@ public class NotificationQueueServiceTest {
                 "Asunto",
                 "Contenido",
                 NotificationPriority.HIGH,
-                Map.of()
+                Map.of(),
+                null
         );
 
         when(notificationRepository.lockPendingNotifications(10))

@@ -75,12 +75,12 @@ public class NotificationServiceIntegrationTest {
 
         // Act: primera solicitud; debe crear y persistir la notificación.
         Notification original = notificationService.createNotification(
-                idempotencyKey, recipient, channel, subject, body, priority, metadata
+                idempotencyKey, recipient, channel, subject, body, priority, metadata, null
         );
 
         // Act: repetir exactamente la misma solicitud con la misma clave.
         Notification retry = notificationService.createNotification(
-                idempotencyKey, recipient, channel, subject, body, priority, metadata
+                idempotencyKey, recipient, channel, subject, body, priority, metadata, null
         );
 
         // Assert: el reintento devuelve la notificación original.
@@ -125,7 +125,8 @@ public class NotificationServiceIntegrationTest {
                 "Confirmación de pago",
                 "Tu pago fue procesado correctamente",
                 NotificationPriority.HIGH,
-                metadata
+                metadata,
+                null
         );
 
         // Act / Assert: reutilizar la clave con un destinatario diferente.
@@ -137,7 +138,8 @@ public class NotificationServiceIntegrationTest {
                         "Confirmación de pago",
                         "Tu pago fue procesado correctamente",
                         NotificationPriority.HIGH,
-                        metadata
+                        metadata,
+                        null
                 )
         ).isInstanceOf(IdempotencyConflictException.class);
 
