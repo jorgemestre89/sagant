@@ -11,6 +11,7 @@ Servicio REST para registrar y procesar notificaciones de forma asíncrona, con 
 - PostgreSQL 17
 - Flyway
 - Spring Security y JWT
+- Swagger/OpenApi
 - Keycloak 26.8.1
 - Docker Compose
 - JUnit y Testcontainers
@@ -74,12 +75,19 @@ Para ejecutar el proyecto localmente se necesita:
 
 ## 5. Configuración de variables de entorno
 
-El repositorio incluye `.env.example` con los nombres de las variables necesarias para inicializar Keycloak:
+El repositorio incluye `.env.example` con los nombres de las variables necesarias para inicializar Keycloak, PostgreSQL y PgAdmin:
 
 ```dotenv
 KEYCLOAK_ADMIN_USERNAME=kcadmin
 KEYCLOAK_ADMIN_PASSWORD=change-me
 KEYCLOAK_DB_PASSWORD=change-me
+
+USER_POSTGRE_API_DB=change-me
+PWD_POSTGRE_API_DB=change-me
+
+EMAIL_PG_ADMIN=change-me
+PWD_PG_ADMIN=change-me
+
 ```
 
 Crear el archivo local a partir del ejemplo:
@@ -90,15 +98,13 @@ Copy-Item .env.example .env
 
 Editar `.env` y sustituir los valores de ejemplo por credenciales locales propias.
 
-**Importante:** `.env` contiene credenciales y no debe versionarse. El repositorio debe incluir `.env.example`, nunca las contraseñas reales.
-
-PostgreSQL de la aplicación y pgAdmin tienen credenciales de desarrollo definidas directamente en `docker-compose.yaml`. No deben reutilizarse como credenciales de producción.
-
 ## 6. Ejecución con Docker Compose
 
-Desde la raíz del repositorio:
+Iniciar DockerDesktop, luego desde la raíz del repositorio:
 
 ```powershell
+docker compose up -d postgres
+docker compose ps
 .\gradlew.bat clean test
 docker compose config --quiet
 docker compose up --build -d
@@ -127,7 +133,15 @@ La base de datos de la aplicación utiliza Flyway para aplicar las migraciones. 
 | PostgreSQL de Keycloak | `localhost:5433` |
 | Servicio simulado | `http://localhost:8090` |
 
-Para pgAdmin, utilizar las credenciales de desarrollo configuradas en `docker-compose.yaml`. Al registrar la conexión con PostgreSQL desde pgAdmin, utilizar `postgres` como host, `5432` como puerto, `sagant` como base de datos y las credenciales configuradas para la aplicación.
+Al registrar la conexión con PostgreSQL desde pgAdmin, utilizar `postgres` como host, `5432` como puerto, `sagant` como base de datos y las credenciales 
+
+configuradas en el `.env` para acceder a la base de datos de PostgreSQL.
+
+```dotenv
+USER_POSTGRE_API_DB=change-me
+PWD_POSTGRE_API_DB=change-me
+```
+
 
 Para detener los servicios:
 
@@ -165,7 +179,7 @@ http://localhost:8180/realms/Sagant
 
 ### 7.3. Crear el cliente
 
-Para obtener tokens desde Postman, crear un cliente, por ejemplo `sagant-postman`, con estas características:
+Para obtener tokens desde Postman, crear un cliente, por ejemplo `sagant-postman` como Client ID y `Sagant Postman` como nombre, además con estas características:
 
 - Habilitar la autenticación del cliente (*Client authentication*).
 - Habilitar *Service accounts roles*.
@@ -219,6 +233,31 @@ POST http://localhost:8080/api/notifications
 
 La solicitud requiere autenticación Bearer y el encabezado `Idempotency-Key`.
 
+### Swagger UI
+
+La API incluye Swagger UI para explorar y probar los endpoints REST desde el navegador, sin necesidad de configurar manualmente cada solicitud en Postman.
+
+Con la aplicación levantada mediante Docker Compose, acceder a:
+
+`http://localhost:8080/swagger-ui/index.html`
+
+La especificación OpenAPI está disponible en:
+
+`http://localhost:8080/v3/api-docs`
+
+Para probar los endpoints protegidos, es necesario obtener previamente un token JWT de Keycloak, siguiendo los pasos de la sección **7. Configuración de Keycloak**.
+
+En Swagger UI:
+
+1. Abrir el endpoint que se desea probar `POST /api/notifications`.
+2. Seleccionar **Try it out**.
+3. Introducir el cuerpo JSON de la solicitud con los datos de la notificación.
+4. Enviar la solicitud incluyendo el encabezado `Idempotency-Key`.
+5. Si el endpoint requiere autenticación, utilizar **Authorize** para configurar el token Bearer obtenido de Keycloak.
+
+La API devuelve `201 Created` cuando la notificación se registra correctamente. Esto confirma su persistencia; el procesamiento y la entrega se realizan de forma asíncrona.
+
+
 ### DTO de entrada: `NotificationRequestDTO`
 
 | Campo | Tipo | Descripción |
@@ -229,7 +268,7 @@ La solicitud requiere autenticación Bearer y el encabezado `Idempotency-Key`.
 | `body` | String | Contenido de la notificación. |
 | `priority` | String | Prioridad, por ejemplo `LOW`, `MEDIUM` o `HIGH`. |
 | `metadata` | Object | Datos adicionales asociados a la notificación. |
-| `serviceUrl` | String | URL del destino HTTP para el canal `SERVICE`. |
+| `serviceUrl` | String | URL del destino HTTP para el canal `SERVICE`. Si el canal es `LOG` no se toma en cuenta este attr|
 
 `recipient`, `subject` y `body` deben contener valores válidos. La validación del resto de los campos depende de las restricciones configuradas en el DTO.
 
@@ -278,7 +317,9 @@ Idempotency-Key: prueba-service-001
 }
 ```
 
-La URL de `serviceUrl` debe ser accesible desde el proceso worker. Cuando el worker se ejecuta dentro de Docker Compose, se utiliza `service-mock` como nombre de host. Si se ejecuta desde IntelliJ, se debe utilizar una dirección accesible desde el equipo, por ejemplo `http://localhost:8090/notifications`.
+La URL de `serviceUrl` debe ser accesible desde el worker. Cuando el worker se ejecuta dentro de Docker Compose, se utiliza `service-mock` como nombre de host. 
+
+Si se ejecuta desde IntelliJ, se debe utilizar una dirección accesible desde el equipo, por ejemplo `http://localhost:8090/notifications`.
 
 ### Respuesta
 
@@ -349,9 +390,9 @@ Los endpoints de Actuator habilitados son:
 Ejemplos:
 
 ```text
-http://localhost:8080/actuator/health
-http://localhost:8081/actuator/health
-http://localhost:8081/actuator/metrics
+GET http://localhost:8080/actuator/health
+GET http://localhost:8081/actuator/health
+GET http://localhost:8081/actuator/metrics
 ```
 
 Los logs permiten seguir el procesamiento y diagnosticar fallos. El worker también expone métricas relacionadas con el procesamiento, los reintentos, los fallos, los rechazos y la recuperación, cuando están registradas por la aplicación.
@@ -381,7 +422,6 @@ Ejecutar la suite completa:
 
 Las pruebas cubren la lógica de negocio, la API y los escenarios de procesamiento implementados. Las pruebas de integración que utilizan Testcontainers necesitan que Docker esté disponible.
 
-Antes de publicar cambios, verificar que las pruebas finalicen correctamente y revisar el estado de Git.
 
 ## 13. Decisiones de diseño y trade-offs
 

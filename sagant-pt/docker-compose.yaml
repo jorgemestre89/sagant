@@ -5,8 +5,8 @@ services:
     container_name: sagant-postgres
     environment:
       POSTGRES_DB: sagant
-      POSTGRES_USER: sagant
-      POSTGRES_PASSWORD: sagant_dev
+      POSTGRES_USER: ${USER_POSTGRE_API_DB:?Defini USER_POSTGRE_API_DB en .env}
+      POSTGRES_PASSWORD: ${PWD_POSTGRE_API_DB:?Defini PWD_POSTGRE_API_DB en .env}
     ports:
       - "5432:5432"
     volumes:
@@ -21,8 +21,8 @@ services:
     image: dpage/pgadmin4
     container_name: sagant-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@sagant.com
-      PGADMIN_DEFAULT_PASSWORD: admin_dev
+      PGADMIN_DEFAULT_EMAIL: ${EMAIL_PG_ADMIN:?Defini EMAIL_PG_ADMIN en .env}
+      PGADMIN_DEFAULT_PASSWORD: ${PWD_PG_ADMIN:?Defini PWD_PG_ADMIN en .env}
     ports:
       - "5050:80"
     volumes:
@@ -38,8 +38,8 @@ services:
     container_name: sagant-api
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sagant
-      SPRING_DATASOURCE_USERNAME: sagant
-      SPRING_DATASOURCE_PASSWORD: sagant_dev
+      SPRING_DATASOURCE_USERNAME: ${USER_POSTGRE_API_DB:?Defini USER_POSTGRE_API_DB en .env}
+      SPRING_DATASOURCE_PASSWORD: ${PWD_POSTGRE_API_DB:?Defini PWD_POSTGRE_API_DB en .env}
       SERVER_PORT: 8080
       SAGANT_SECURITY_ISSUER_URI: http://localhost:8180/realms/Sagant
       SAGANT_SECURITY_JWK_SET_URI: http://keycloak:8080/realms/Sagant/protocol/openid-connect/certs
@@ -62,8 +62,8 @@ services:
     container_name: sagant-worker
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sagant
-      SPRING_DATASOURCE_USERNAME: sagant
-      SPRING_DATASOURCE_PASSWORD: sagant_dev
+      SPRING_DATASOURCE_USERNAME: ${USER_POSTGRE_API_DB:?Defini USER_POSTGRE_API_DB en .env}
+      SPRING_DATASOURCE_PASSWORD: ${PWD_POSTGRE_API_DB:?Defini PWD_POSTGRE_API_DB en .env}
       SERVER_PORT: 8081
       NOTIFICATIONS_SERVICE_URL: ${NOTIFICATIONS_SERVICE_URL:-http://service-mock:8090/notifications}
     ports:
