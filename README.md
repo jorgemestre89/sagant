@@ -82,9 +82,6 @@ KEYCLOAK_ADMIN_USERNAME=kcadmin
 KEYCLOAK_ADMIN_PASSWORD=change-me
 KEYCLOAK_DB_PASSWORD=change-me
 
-USER_POSTGRE_API_DB=change-me
-PWD_POSTGRE_API_DB=change-me
-
 EMAIL_PG_ADMIN=change-me
 PWD_PG_ADMIN=change-me
 
@@ -97,6 +94,8 @@ Copy-Item .env.example .env
 ```
 
 Editar `.env` y sustituir los valores de ejemplo por credenciales locales propias.
+
+PostgreSQL de la aplicación tiene credenciales de desarrollo definidas directamente en `docker-compose.yaml`. No deben reutilizarse como credenciales de producción. 
 
 ## 6. Ejecución con Docker Compose
 
@@ -117,7 +116,8 @@ docker compose ps
 docker compose logs -f api worker
 ```
 
-Docker Compose inicia PostgreSQL, la API, el worker, el servicio simulado, pgAdmin, la base de datos de Keycloak y Keycloak.
+Docker Compose inicia PostgreSQL, la API, el worker, el servicio simulado, pgAdmin, la base de datos de Keycloak y Keycloak. 
+
 
 La base de datos de la aplicación utiliza Flyway para aplicar las migraciones. El worker utiliza el esquema existente y no ejecuta las migraciones.
 
