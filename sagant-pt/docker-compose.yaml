@@ -5,8 +5,8 @@ services:
     container_name: sagant-postgres
     environment:
       POSTGRES_DB: sagant
-      POSTGRES_USER: sagant
-      POSTGRES_PASSWORD: sagant_dev
+      POSTGRES_USER: ${USER_POSTGRE_API_DB:?Defini USER_POSTGRE_API_DB en .env}
+      POSTGRES_PASSWORD: ${PWD_POSTGRE_API_DB:?Defini PWD_POSTGRE_API_DB en .env}
     ports:
       - "5432:5432"
     volumes:

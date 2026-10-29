@@ -78,12 +78,17 @@ Para ejecutar el proyecto localmente se necesita:
 El repositorio incluye `.env.example` con los nombres de las variables necesarias para inicializar Keycloak, PostgreSQL y PgAdmin:
 
 ```dotenv
+USER_POSTGRE_API_DB=sagant
+PWD_POSTGRE_API_DB=sagant_dev
+
 KEYCLOAK_ADMIN_USERNAME=kcadmin
 KEYCLOAK_ADMIN_PASSWORD=change-me
 KEYCLOAK_DB_PASSWORD=change-me
 
 EMAIL_PG_ADMIN=change-me
 PWD_PG_ADMIN=change-me
+
+NOTIFICATIONS_SERVICE_URL=http://service-mock:8090/notifications
 
 ```
 
@@ -95,7 +100,7 @@ Copy-Item .env.example .env
 
 Editar `.env` y sustituir los valores de ejemplo por credenciales locales propias.
 
-PostgreSQL de la aplicación tiene credenciales de desarrollo definidas directamente en `docker-compose.yaml`. No deben reutilizarse como credenciales de producción. 
+PostgreSQL de la aplicación tiene credenciales de desarrollo para los test. No deben reutilizarse como credenciales de producción. 
 
 ## 6. Ejecución con Docker Compose
 
