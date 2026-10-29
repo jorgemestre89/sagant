@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Map;
 import java.util.Objects;
 
-@Schema(description = "Datos necesarios para registrar una notificaci√≥n")
+@Schema(description = "Datos necesarios para registrar una notificaciÛn")
 @Data
 @NoArgsConstructor
 public class NotificationRequestDTO {
@@ -24,11 +24,11 @@ public class NotificationRequestDTO {
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "El destinatario es obligatorio")
-    @Email(message = "El destinatario debe ser un email v√°lido")
+    @Email(message = "El destinatario debe ser un email v·lido")
     String recipient;
 
     @Schema(
-            description = "Canal por el que se despachar√° la notificaci√≥n",
+            description = "Canal por el que se despachar· la notificaciÛn",
             example = "LOG",
             defaultValue = "LOG",
             nullable = true
@@ -36,16 +36,16 @@ public class NotificationRequestDTO {
     NotificationChannel channel = NotificationChannel.LOG;
 
     @Schema(
-            description = "Asunto de la notificaci√≥n",
-            example = "Confirmaci√≥n de operaci√≥n",
+            description = "Asunto de la notificaciÛn",
+            example = "ConfirmaciÛn de operaciÛn",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "El asunto es obligatorio")
     String subject;
 
     @Schema(
-            description = "Contenido de la notificaci√≥n",
-            example = "La operaci√≥n se complet√≥ correctamente",
+            description = "Contenido de la notificaciÛn",
+            example = "La operaciÛn se completÛ correctamente",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "El cuerpo es obligatorio")
@@ -60,7 +60,7 @@ public class NotificationRequestDTO {
     private NotificationPriority priority = NotificationPriority.LOW;
 
     @Schema(
-            description = "Metadatos adicionales de la notificaci√≥n",
+            description = "Metadatos adicionales de la notificaciÛn",
             example = "{\"origen\":\"sistema-operaciones\"}"
     )
     private Map<String, String> metadata = Map.of();
@@ -84,10 +84,11 @@ public class NotificationRequestDTO {
     }
 
     @JsonIgnore
-    @AssertTrue(message = "serviceUrl es obligatoria y debe ser una URL HTTP v√°lida para el canal SERVICE")
+    @AssertTrue(message = "serviceUrl es obligatoria y debe ser una URL HTTP v·lida para el canal SERVICE")
     public boolean isServiceUrlValid() {
+        // Solo validamos la URL cuando el canal es SERVICE.
         if (channel != NotificationChannel.SERVICE) {
-            return serviceUrl == null || serviceUrl.isBlank();
+            return true;
         }
 
         if (serviceUrl == null || serviceUrl.isBlank()) {
